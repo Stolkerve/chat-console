@@ -1,4 +1,4 @@
-use shared_utils::{encode_str, decode_header, MSG_MAX_BYTES_SIZE};
+use shared_utils::{decode_header, encode_str, read_from_socket, MSG_MAX_BYTES_SIZE};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -22,6 +22,10 @@ async fn main() {
             let (mut reader, mut writer) = socket.split();
 
             let mut msg_len_buf = vec![0; MSG_MAX_BYTES_SIZE];
+
+            let wellcome_buff = read_from_socket(&mut reader, &mut msg_len_buf).await;
+            let wellcome = format!("Wellcome {}", String::from_utf8(wellcome_buff).unwrap());
+            tx.send((addr.to_string(), wellcome)).unwrap();
 
             loop {
                 tokio::select! {

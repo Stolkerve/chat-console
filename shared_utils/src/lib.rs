@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use tokio::{io::AsyncReadExt, net::tcp::ReadHalf};
+
 pub const MSG_MAX_BYTES_SIZE: usize = std::mem::size_of::<u32>();
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -59,4 +61,13 @@ pub fn decode_header(data: &[u8]) -> u32 {
 
 pub fn decode_msg(data: &String) -> Msg {
     serde_json::from_str(data).unwrap()
+}
+
+pub async fn read_from_socket(reader: &mut ReadHalf<'_>, mut msg_len_buf: &mut Vec<u8>) -> Vec<u8> {
+    reader.read(&mut msg_len_buf).await.unwrap();
+    let msg_len = decode_header(&msg_len_buf[..]);
+    let mut buf = vec![0; msg_len as usize];
+    reader.read(&mut buf).await.unwrap();
+
+    buf
 }
