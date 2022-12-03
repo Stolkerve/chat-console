@@ -23,10 +23,9 @@ async fn main() {
 
             let mut msg_len_buf = vec![0; MSG_MAX_BYTES_SIZE];
 
-            let wellcome_buff = read_from_socket(&mut reader, &mut msg_len_buf).await;
-            let wellcome = format!("Wellcome {}", String::from_utf8(wellcome_buff).unwrap());
-            tx.send((addr.to_string(), wellcome)).unwrap();
-
+            // let wellcome_buff = read_from_socket(&mut reader, &mut msg_len_buf).await;
+            // let wellcome = format!("Wellcome {}", String::from_utf8(wellcome_buff).unwrap());
+            // tx.send((addr.to_string(), wellcome)).unwrap();
             loop {
                 tokio::select! {
                     bytes_readed = reader.read(&mut msg_len_buf) => {
