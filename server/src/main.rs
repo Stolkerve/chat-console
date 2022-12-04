@@ -1,4 +1,4 @@
-use shared_utils::{decode_header, encode_str, read_from_socket, MSG_MAX_BYTES_SIZE};
+use shared_utils::{decode_header, encode_str, MSG_MAX_BYTES_SIZE, encode_bytes};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -11,7 +11,7 @@ async fn main() {
         .await
         .expect("Couldn't bind server");
 
-    let (tx, _) = broadcast::channel::<(String, String)>(32);
+    let (tx, _) = broadcast::channel::<(String, Vec<u8>)>(32);
 
     loop {
         let (mut socket, addr) = listener.accept().await.unwrap();
@@ -23,9 +23,6 @@ async fn main() {
 
             let mut msg_len_buf = vec![0; MSG_MAX_BYTES_SIZE];
 
-            // let wellcome_buff = read_from_socket(&mut reader, &mut msg_len_buf).await;
-            // let wellcome = format!("Wellcome {}", String::from_utf8(wellcome_buff).unwrap());
-            // tx.send((addr.to_string(), wellcome)).unwrap();
             loop {
                 tokio::select! {
                     bytes_readed = reader.read(&mut msg_len_buf) => {
@@ -34,16 +31,16 @@ async fn main() {
                             println!("Peer {:?} disconected", addr);
                             break;
                         }
-
                         let len = decode_header(&msg_len_buf[..]);
+
                         let mut buf = vec![0; len as usize];
                         reader.read(&mut buf).await.unwrap();
-                        tx.send((addr.to_string(), String::from_utf8(buf).unwrap())).unwrap();
+                        tx.send((addr.to_string(), encode_bytes(buf))).unwrap();
                     },
                     msg = rx.recv() => {
                         let (sender_addr, msg) = msg.unwrap();
                         if addr.to_string() != sender_addr {
-                            writer.write_all(&encode_str(&msg)[..]).await.unwrap();
+                            writer.write_all(&msg[..]).await.unwrap();
                         }
                     }
                 }

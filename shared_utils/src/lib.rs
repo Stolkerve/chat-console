@@ -5,9 +5,21 @@ use tokio::{io::AsyncReadExt, net::tcp::ReadHalf};
 pub const MSG_MAX_BYTES_SIZE: usize = std::mem::size_of::<u32>();
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum MsgRoleType {
+    Server,
+    User
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MsgDataType {
+    Text(String),
+    // Image
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Msg {
     pub username: String,
-    pub msg: String,
+    pub data: MsgDataType,
+    pub role: MsgRoleType
 }
 
 pub fn encode_str(str: &String) -> Vec<u8> {
@@ -24,6 +36,24 @@ pub fn encode_str(str: &String) -> Vec<u8> {
     }
 
     buf.splice(MSG_MAX_BYTES_SIZE.., str.bytes());
+
+    buf
+}
+
+pub fn encode_bytes(bytes: Vec<u8>) -> Vec<u8> {
+    let mut buf = Vec::new();
+
+    let mut offset: u8 = 0;
+    let msg_size = bytes.len();
+    buf.reserve(MSG_MAX_BYTES_SIZE + msg_size);
+
+    // writing the msg size
+    for _ in 0..MSG_MAX_BYTES_SIZE {
+        buf.push(((msg_size >> offset) & 0xFF) as u8);
+        offset += 8;
+    }
+
+    buf.splice(MSG_MAX_BYTES_SIZE.., bytes);
 
     buf
 }
