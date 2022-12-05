@@ -22,6 +22,20 @@ pub struct Msg {
     pub role: MsgRoleType
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LoginMsg {
+    pub username: String,
+    pub password: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum MsgType {
+    Msg(Msg),
+    Login(LoginMsg),
+    Register(LoginMsg),
+    Response(String)
+}
+
 pub fn encode_str(str: &String) -> Vec<u8> {
     let mut buf = Vec::new();
 
@@ -58,7 +72,7 @@ pub fn encode_bytes(bytes: Vec<u8>) -> Vec<u8> {
     buf
 }
 
-pub fn encode_msg(msg: &Msg) -> Vec<u8> {
+pub fn encode_msg(msg: &MsgType) -> Vec<u8> {
     let mut buf = Vec::new();
     let serialized = serde_json::to_string(msg).unwrap();
 
@@ -89,8 +103,21 @@ pub fn decode_header(data: &[u8]) -> u32 {
     return value;
 }
 
-pub fn decode_msg(data: &String) -> Msg {
-    serde_json::from_str(data).unwrap()
+pub fn decode_msg_type(data: &Vec<u8>) -> Option<MsgType> {
+    if let Ok(mgs_type) = serde_json::from_str::<MsgType>(std::str::from_utf8(data).unwrap()) {
+        return Some(mgs_type);
+    }
+    None
+}
+
+pub fn decode_msg(data: &Vec<u8>) -> Option<Msg> {
+    if let Ok(mgs_type) = serde_json::from_str::<MsgType>(std::str::from_utf8(data).unwrap()) {
+        match mgs_type {
+            MsgType::Msg(msg) => return Some(msg),
+            _ => return None
+        };
+    }
+    None
 }
 
 pub async fn read_from_socket(reader: &mut ReadHalf<'_>, mut msg_len_buf: &mut Vec<u8>) -> Vec<u8> {

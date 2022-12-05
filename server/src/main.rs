@@ -1,4 +1,4 @@
-use shared_utils::{decode_header, encode_str, MSG_MAX_BYTES_SIZE, encode_bytes};
+use shared_utils::{decode_header, encode_bytes, decode_msg_type, MSG_MAX_BYTES_SIZE, MsgType, encode_msg, Msg, MsgRoleType, MsgDataType};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -23,6 +23,18 @@ async fn main() {
 
             let mut msg_len_buf = vec![0; MSG_MAX_BYTES_SIZE];
 
+            // wellcome msg
+            reader.read(&mut msg_len_buf).await.unwrap();
+            let mut username = vec![0; decode_header(&msg_len_buf) as usize];
+            reader.read(&mut username).await.unwrap();
+            tx.send((addr.to_string(), encode_msg(
+                &MsgType::Msg(Msg{
+                    username: "Server".to_owned(),
+                    role: MsgRoleType::Server,
+                    data: MsgDataType::Text(format!("Wellcome {}", String::from_utf8(username).unwrap()))
+                })
+            ))).unwrap();
+
             loop {
                 tokio::select! {
                     bytes_readed = reader.read(&mut msg_len_buf) => {
@@ -35,7 +47,15 @@ async fn main() {
 
                         let mut buf = vec![0; len as usize];
                         reader.read(&mut buf).await.unwrap();
-                        tx.send((addr.to_string(), encode_bytes(buf))).unwrap();
+                        let msg = decode_msg_type(&buf).unwrap();
+                        match msg {
+                            MsgType::Msg(_) => {
+                                tx.send((addr.to_string(), encode_bytes(buf))).unwrap();
+                            },
+                            MsgType::Login(_) => todo!(),
+                            MsgType::Register(_) => todo!(),
+                            _ => {}
+                        }
                     },
                     msg = rx.recv() => {
                         let (sender_addr, msg) = msg.unwrap();

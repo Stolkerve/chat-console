@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 shared_utils = {path="../shared_utils"}
+sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "sqlite" ] }
